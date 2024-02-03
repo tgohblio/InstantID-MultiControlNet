@@ -27,6 +27,9 @@ build:
     - "huggingface-hub==0.20.3"
     - "safetensors==0.4.2"
     - "peft"
+    - "einops"
+    - "omegaconf"
+    - "controlnet_aux"
 
   # commands run after the environment is setup
   run:
