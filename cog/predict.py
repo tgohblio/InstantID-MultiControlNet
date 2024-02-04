@@ -182,7 +182,7 @@ class Predictor(BasePredictor):
 
     def get_canny_image(self, image, t1=100, t2=200):
         """Get the canny edges from input image"""
-        image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        image = convert_from_image_to_cv2(image)
         edges = cv2.Canny(image, t1, t2)
         return Image.fromarray(edges, "L")
 
@@ -277,34 +277,45 @@ class Predictor(BasePredictor):
         ),
     ) -> Path:
         """Run a single prediction on the model"""
+        # Resize the output if the provided dimensions are different from the current ones
         if self.width != width or self.height != height:
             print(f"[!] Resizing output to {width}x{height}")
             self.width = width
             self.height = height
             self.app.prepare(ctx_id=0, det_size=(self.width, self.height))
 
-        face_image = load_image(str(face_image_path))
-        face_image = resize_img(face_image)
+        # Load and resize the face image
+        face_image = load_image(face_image_path)
+        face_image = resize_img(face_image, max_side=1024)
+        face_image_cv2 = convert_from_image_to_cv2(face_image)
+        height, width, _ = face_image_cv2.shape
 
-        face_info = self.app.get(cv2.cvtColor(np.array(face_image), cv2.COLOR_RGB2BGR))
+        # Extract face features
+        face_info = self.app.get(face_image_cv2)
+        if len(face_info) == 0:
+            raise ValueError(
+                "Unable to detect your face in the photo. Please upload a different photo with a clear face."
+            )
         face_info = sorted(
             face_info,
-            key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]),
-            reverse=True,
-        )[0]  # only use the maximum face
+            key=lambda x: (x["bbox"][2] - x["bbox"][0]) * x["bbox"][3] - x["bbox"][1],
+        )[-1]  # only use the maximum face
         face_emb = face_info["embedding"]
-        face_kps = draw_kps(face_image, face_info["kps"])
+        face_kps = draw_kps(convert_from_cv2_to_image(face_image_cv2), face_info["kps"])
         img_controlnet = face_image
 
+        # If pose image is provided, use it to extra the pose
         if pose_image_path is not None:
             pose_image = load_image(pose_image_path)
             pose_image = resize_img(pose_image, max_side=1024)
             img_controlnet = pose_image
             pose_image_cv2 = convert_from_image_to_cv2(pose_image)
+
+            # Extract face features from the reference pose image
             face_info = self.app.get(pose_image_cv2)
             if len(face_info) == 0:
-                raise Exception(
-                    "Unable to detect a face reference photo. Please upload another person's image."
+                raise ValueError(
+                    "Unable to detect a face in the reference image. Please upload another person's image."
                 )
             face_info = face_info[-1]
             face_kps = draw_kps(pose_image, face_info["kps"])
@@ -353,6 +364,8 @@ class Predictor(BasePredictor):
             num_inference_steps=num_steps,
             guidance_scale=guidance_scale,
             generator=generator,
+            height=height,
+            width=width,
         ).images[0]
         output_path = "result.jpg"
 
