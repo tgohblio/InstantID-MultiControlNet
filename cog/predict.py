@@ -200,7 +200,10 @@ class Predictor(BasePredictor):
     def predict(
         self,
         face_image_path: Path = Input(description="Image of your face"),
-        pose_image_path: Path = Input(description="Reference pose image"),
+        pose_image_path: Path = Input(
+            description="Reference pose image",
+            default=None,
+        ),
         prompt: str = Input(
             description="Input prompt",
             default="a person",
@@ -267,7 +270,7 @@ class Predictor(BasePredictor):
         ),
         seed: int = Input(
             description="Seed number. Set to non-zero to make the image reproducible.",
-            default=0,
+            default=None,
             ge=1,
             le=MAX_SEED,
         ),
@@ -285,7 +288,7 @@ class Predictor(BasePredictor):
             self.app.prepare(ctx_id=0, det_size=(self.width, self.height))
 
         # Load and resize the face image
-        face_image = load_image(face_image_path)
+        face_image = load_image(str(face_image_path))
         face_image = resize_img(face_image, max_side=1024)
         face_image_cv2 = convert_from_image_to_cv2(face_image)
         height, width, _ = face_image_cv2.shape
@@ -306,7 +309,7 @@ class Predictor(BasePredictor):
 
         # If pose image is provided, use it to extra the pose
         if pose_image_path is not None:
-            pose_image = load_image(pose_image_path)
+            pose_image = load_image(str(pose_image_path))
             pose_image = resize_img(pose_image, max_side=1024)
             img_controlnet = pose_image
             pose_image_cv2 = convert_from_image_to_cv2(pose_image)
