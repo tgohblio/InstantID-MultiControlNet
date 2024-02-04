@@ -1,7 +1,5 @@
 # InstantID Cog Model
 
-[![Replicate](https://replicate.com/zsxkib/instant-id/badge)](https://replicate.com/zsxkib/instant-id)
-
 ## Overview
 This repository contains the implementation of [InstantID](https://github.com/InstantID/InstantID) as a [Cog](https://github.com/replicate/cog) model. 
 
@@ -15,44 +13,68 @@ To make predictions using the model, execute the following command from the root
 
 ```bash
 cog predict \
--i image=@examples/sam_resize.png \
--i prompt="analog film photo of a man. faded film, desaturated, 35mm photo, grainy, vignette, vintage, Kodachrome, Lomography, stained, highly detailed, found footage, masterpiece, best quality" \
+-i face_image_path=@examples/halle-berry.jpeg \
+-i prompt="woman as elven princess, with blue sheen dress" \
 -i negative_prompt="nsfw" \
--i width=680 \
--i height=680 \
--i ip_adapter_scale=0.8 \
--i controlnet_conditioning_scale=0.8 \
--i num_inference_steps=30 \
--i guidance_scale=5
+-i width=1024 \
+-i height=1024 \
+-i adapter_strength_ratio=0.8 \
+-i identitynet_strength_ratio=0.8 \
+-i num_steps=6 \
+-i guidance_scale=0 \
+-i safety_checker=True
 ```
 
 <table>
   <tr>
     <td>
       <p align="center">Input</p>
-      <img src="https://replicate.delivery/pbxt/KGy0R72cMwriR9EnCLu6hgVkQNd60mY01mDZAQqcUic9rVw4/musk_resize.jpeg" alt="Sample Input Image" width="90%"/>
+      <img src="examples/halle-berry.jpeg" alt="Sample Input Image" width="100%"/>
     </td>
     <td>
       <p align="center">Output</p>
-      <img src="https://replicate.delivery/pbxt/oGOxXELcLcpaMBeIeffwdxKZAkuzwOzzoxKadjhV8YgQWk8IB/result.jpg" alt="Sample Output Image" width="100%"/>
+      <img src="examples/result.jpg" alt="Sample Output Image" width="100%"/>
     </td>
   </tr>
 </table>
+
+```bash
+cog predict \
+-i face_image_path=@examples/sam_resize.png \
+-i pose_image_path=@exmaples/pose.png \
+-i prompt="photo of a ballerina on stage" \
+-i width=1024 \
+-i height=1024 \
+-i adapter_strength_ratio=0.8 \
+-i identitynet_strength_ratio=0.8 \
+-i controlnet_selection="pose" \
+-i pose_strength=0.5 \
+-i num_steps=6 \
+-i guidance_scale=0 \
+-i safety_checker=True
+```
 
 ## Input Parameters
 
 The following table provides details about each input parameter for the `predict` function:
 
-| Parameter                       | Description                        | Default Value                                                                                                  | Range       |
-| ------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------- |
-| `image`                         | Input image                        | A path to the input image file                                                                                 | Path string |
-| `prompt`                        | Input prompt                       | "analog film photo of a man. faded film, desaturated, 35mm photo, grainy, vignette, vintage, Kodachrome, ... " | String      |
-| `negative_prompt`               | Input Negative Prompt              | (empty string)                                                                                                 | String      |
-| `width`                         | Width of output image              | 640                                                                                                            | 512 - 2048  |
-| `height`                        | Height of output image             | 640                                                                                                            | 512 - 2048  |
-| `ip_adapter_scale`              | Scale for IP adapter               | 0.8                                                                                                            | 0.0 - 1.0   |
-| `controlnet_conditioning_scale` | Scale for ControlNet conditioning  | 0.8                                                                                                            | 0.0 - 1.0   |
-| `num_inference_steps`           | Number of denoising steps          | 30                                                                                                             | 1 - 500     |
-| `guidance_scale`                | Scale for classifier-free guidance | 5                                                                                                              | 1 - 50      |
+| Parameter                       | Description                        | Default Value                                     | Range       |
+| ------------------------------- | ---------------------------------- | --------------------------------------------------| ----------- |
+| `face_image_path`               | Input image                        | A path to the input image file                    | Path string |
+| `pose_image_path`               | Input image                        | A path to the reference pose image file           | Path string |
+| `prompt`                        | Input prompt                       | "a person"                                        | String      |
+| `negative_prompt`               | Input Negative Prompt              | "ugly, low quality, deformed face"                | String      |
+| `width`                         | Width of output image              | 640                                               | 512 - 2048  |
+| `height`                        | Height of output image             | 640                                               | 512 - 2048  |
+| `adapter_strength_ratio`        | Scale for IP adapter               | 0.8                                               | 0.0 - 1.0   |
+| `identitynet_strength_ratio`    | Scale for ControlNet conditioning  | 0.8                                               | 0.0 - 1.0   |
+| `controlnet_selection`          | ControlNet type selection          | None                                              | String      |
+| `pose_strength`                 | Scale for pose conditioning        | 0.5                                               | 0.0 - 1.5   |
+| `canny_strength`                | Scale for canny edge conditioning  | 0.5                                               | 0.0 - 1.5   |
+| `depth_strength`                | Scale for depth map conditioning   | 0.5                                               | 0.0 - 1.5   |
+| `num_steps`                     | Number of denoising steps          | 6                                                 | 1 - 50      |
+| `guidance_scale`                | Scale for classifier-free guidance | 0                                                 | 1 - 10      |
+| `seed`                          | RNG seed number                    | 0 (= random seed)                                 | 0 - int MAX |
+| `safety_checker`                | Enable or disable NSFW filter      | True                                              | Boolean     |
 
 This table provides a quick reference to understand and modify the inputs for generating predictions using the model.
