@@ -8,21 +8,28 @@ from cog import BasePredictor, Input, Path
 
 import cv2
 import torch
+import torch.nn.functional as F
 import numpy as np
-from PIL import Image
+import random
 
+from PIL import Image
+from torchvision.transforms import Compose
 from diffusers import LCMScheduler
 from diffusers.utils import load_image
 from diffusers.models import ControlNetModel
+from diffusers.pipelines.controlnet.multicontrolnet import MultiControlNetModel
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import CLIPImageProcessor
 from insightface.app import FaceAnalysis
+from controlnet_aux import OpenposeDetector
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from pipeline_stable_diffusion_xl_instantid import (
+from pipeline_stable_diffusion_xl_instantid_full import (
     StableDiffusionXLInstantIDPipeline,
     draw_kps,
 )
+from depth_anything.dpt import DepthAnything
+from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
 
 # for ip-adapter, ControlNetModel
 CHECKPOINTS_CACHE = "./checkpoints"
@@ -35,6 +42,13 @@ SD_MODEL_NAME = "GraydientPlatformAPI/albedobase2-xl"
 SAFETY_MODEL_CACHE = "./safety_cache"
 FEATURE_EXTRACT_CACHE = "feature_extractor"
 
+# global variable
+MAX_SEED = np.iinfo(np.int32).max
+device = "cuda" if torch.cuda.is_available() else "cpu"
+dtype = torch.float16 if str(device).__contains__("cuda") else torch.float32
+enable_lcm_arg = False
+
+
 def resize_img(
     input_image,
     max_side=1280,
@@ -44,6 +58,7 @@ def resize_img(
     mode=Image.BILINEAR,
     base_pixel_number=64,
 ):
+    """Resize input image"""
     w, h = input_image.size
     if size is not None:
         w_resize_new, h_resize_new = size
@@ -66,13 +81,19 @@ def resize_img(
         input_image = Image.fromarray(res)
     return input_image
 
+def convert_from_cv2_to_image(img: np.ndarray) -> Image:
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
+def convert_from_image_to_cv2(img: Image) -> np.ndarray:
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Load safety checker"""
         self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-            SAFETY_MODEL_CACHE, torch_dtype=torch.float16
-        ).to("cuda")
+            SAFETY_MODEL_CACHE, torch_dtype=dtype
+        ).to(device)
         self.feature_extractor = CLIPImageProcessor.from_pretrained(FEATURE_EXTRACT_CACHE)
 
         """Load the model into memory to make running multiple predictions efficient"""
@@ -80,30 +101,57 @@ class Predictor(BasePredictor):
         self.app = FaceAnalysis(
             name="antelopev2",
             root="./",
-            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            providers=["CPUExecutionProvider"],
         )
         self.app.prepare(ctx_id=0, det_size=(self.width, self.height))
+
+        # Load openpose and depth-anything controlnet pipelines
+        self.openpose = OpenposeDetector.from_pretrained("lllyasviel/ControlNet")
+        self.depth_anything = DepthAnything.from_pretrained('LiheYoung/depth_anything_vitl14').to(device).eval()
+
+        self.transform = Compose([
+            Resize(
+                width=518,
+                height=518,
+                resize_target=False,
+                keep_aspect_ratio=True,
+                ensure_multiple_of=14,
+                resize_method='lower_bound',
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            PrepareForNet(),
+        ])
 
         # Path to InstantID models
         face_adapter = f"{CHECKPOINTS_CACHE}/ip-adapter.bin"
         controlnet_path = f"{CHECKPOINTS_CACHE}/ControlNetModel"
 
-        # Load pipeline
-        self.controlnet = ControlNetModel.from_pretrained(
+        # Load pipeline face ControlNetModel
+        self.controlnet_identitynet = ControlNetModel.from_pretrained(
             controlnet_path,
-            torch_dtype=torch.float16,
+            torch_dtype=dtype,
             cache_dir=CHECKPOINTS_CACHE,
             use_safetensors=True,
             local_files_only=True,
         )
 
+        # Load controlnet-pose/canny/depth
+        controlnet_pose_model = "thibaud/controlnet-openpose-sdxl-1.0"
+        controlnet_canny_model = "diffusers/controlnet-canny-sdxl-1.0"
+        controlnet_depth_model = "diffusers/controlnet-depth-sdxl-1.0-small"
+
+        self.controlnet_pose = ControlNetModel.from_pretrained(controlnet_pose_model, torch_dtype=dtype).to(device)
+        self.controlnet_canny = ControlNetModel.from_pretrained(controlnet_canny_model, torch_dtype=dtype).to(device)
+        self.controlnet_depth = ControlNetModel.from_pretrained(controlnet_depth_model, torch_dtype=dtype).to(device)
+
         self.pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
             SD_MODEL_NAME,
-            controlnet=self.controlnet,
-            torch_dtype=torch.float16,
+            controlnet=[self.controlnet_identitynet],
+            torch_dtype=dtype,
             cache_dir=SD_MODEL_CACHE,
             use_safetensors=True,
-        )
+        ).to(device)
 
         # load LCM LoRA
         self.pipe.load_lora_weights(f"{CHECKPOINTS_CACHE}/pytorch_lora_weights.safetensors")
@@ -112,28 +160,54 @@ class Predictor(BasePredictor):
 
         self.pipe.cuda()
         self.pipe.load_ip_adapter_instantid(face_adapter)
+        self.pipe.image_proj_model.to("cuda")
+        self.pipe.unet.to("cuda")
+
+    def get_depth_map(self, image):
+        """Get the depth map from input image"""
+        image = np.array(image) / 255.0
+        h, w = image.shape[:2]
+
+        image = self.transform({'image': image})['image']
+        image = torch.from_numpy(image).unsqueeze(0).to("cuda")
+
+        with torch.no_grad():
+            depth = self.depth_anything(image)
+
+        depth = F.interpolate(depth[None], (h, w), mode='bilinear', align_corners=False)[0, 0]
+        depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+        depth = depth.cpu().numpy().astype(np.uint8)
+        depth_image = Image.fromarray(depth)
+        return depth_image
+
+    def get_canny_image(self, image, t1=100, t2=200):
+        """Get the canny edges from input image"""
+        image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        edges = cv2.Canny(image, t1, t2)
+        return Image.fromarray(edges, "L")
 
     def run_safety_checker(self, image) -> (list, list):
         """Detect nsfw content"""
-        safety_checker_input = self.feature_extractor(image, return_tensors="pt").to("cuda")
+        safety_checker_input = self.feature_extractor(image, return_tensors="pt").to(device)
         np_image = [np.array(val) for val in image]
         image, has_nsfw_concept = self.safety_checker(
             images=np_image,
-            clip_input=safety_checker_input.pixel_values.to(torch.float16),
+            clip_input=safety_checker_input.pixel_values.to(dtype),
         )
         return image, has_nsfw_concept
 
     @torch.inference_mode()
     def predict(
         self,
-        image: Path = Input(description="Input image"),
+        face_image_path: Path = Input(description="Image of your face"),
+        pose_image_path: Path = Input(description="Reference pose image"),
         prompt: str = Input(
             description="Input prompt",
-            default="analog film photo of a man. faded film, desaturated, 35mm photo, grainy, vignette, vintage, Kodachrome, Lomography, stained, highly detailed, found footage, masterpiece, best quality",
+            default="a person",
         ),
         negative_prompt: str = Input(
-            description="Input Negative Prompt",
-            default="",
+            description="Input negative prompt",
+            default="ugly, low quality, deformed face",
         ),
         width: int = Input(
             description="Width of output image",
@@ -147,19 +221,39 @@ class Predictor(BasePredictor):
             ge=512,
             le=2048,
         ),
-        ip_adapter_scale: float = Input(
-            description="Scale for IP adapter",
+        adapter_strength_ratio: float = Input(
+            description="Image adapter strength (for detail)",
             default=0.8,
             ge=0,
             le=1,
         ),
-        controlnet_conditioning_scale: float = Input(
-            description="Scale for ControlNet conditioning",
+        identitynet_strength_ratio: float = Input(
+            description="IdentityNet strength (for fidelity)",
             default=0.8,
             ge=0,
             le=1,
         ),
-        num_inference_steps: int = Input(
+        controlnet_selection: str = Input (
+            description="Use pose for skeleton inference, canny for edge detection, and depth for depth map estimation. Or try all three to control the generation process.",
+            default=None,
+            choices=["pose", "canny", "depth"],
+        ),
+        pose_strength: float = Input(
+            default=0.5,
+            ge=0,
+            le=1.5,
+        ),
+        canny_strength: float = Input(
+            default=0.5,
+            ge=0,
+            le=1.5,
+        ),
+        depth_strength: float = Input(
+            default=0.5,
+            ge=0,
+            le=1.5,
+        ),
+        num_steps: int = Input(
             description="Number of denoising steps. With LCM-LoRA, optimum is 6-8.",
             default=6,
             ge=1,
@@ -170,6 +264,12 @@ class Predictor(BasePredictor):
             default=0,
             ge=0,
             le=10,
+        ),
+        seed: int = Input(
+            description="Seed number. Set to non-zero to make the image reproducible.",
+            default=0,
+            ge=1,
+            le=MAX_SEED,
         ),
         safety_checker: bool = Input(
             description="Safety checker is enabled by default. Un-tick to expose unfiltered results.",
@@ -183,7 +283,7 @@ class Predictor(BasePredictor):
             self.height = height
             self.app.prepare(ctx_id=0, det_size=(self.width, self.height))
 
-        face_image = load_image(str(image))
+        face_image = load_image(str(face_image_path))
         face_image = resize_img(face_image)
 
         face_info = self.app.get(cv2.cvtColor(np.array(face_image), cv2.COLOR_RGB2BGR))
@@ -194,16 +294,65 @@ class Predictor(BasePredictor):
         )[0]  # only use the maximum face
         face_emb = face_info["embedding"]
         face_kps = draw_kps(face_image, face_info["kps"])
+        img_controlnet = face_image
 
-        self.pipe.set_ip_adapter_scale(ip_adapter_scale)
+        if pose_image_path is not None:
+            pose_image = load_image(pose_image_path)
+            pose_image = resize_img(pose_image, max_side=1024)
+            img_controlnet = pose_image
+            pose_image_cv2 = convert_from_image_to_cv2(pose_image)
+            face_info = self.app.get(pose_image_cv2)
+            if len(face_info) == 0:
+                raise Exception(
+                    "Unable to detect a face reference photo. Please upload another person's image."
+                )
+            face_info = face_info[-1]
+            face_kps = draw_kps(pose_image, face_info["kps"])
+            width, height = face_kps.size
+
+        controlnet_map = {
+            "pose": self.controlnet_pose,
+            "canny": self.controlnet_canny,
+            "depth": self.controlnet_depth,
+        }
+        controlnet_map_fn = {
+            "pose": self.openpose,
+            "canny": self.get_canny_image,
+            "depth": self.get_depth_map,
+        }
+
+        if len(controlnet_selection) > 0:
+            controlnet_scales = {
+                "pose": pose_strength,
+                "canny": canny_strength,
+                "depth": depth_strength,
+            }
+            self.pipe.controlnet = MultiControlNetModel([self.controlnet_identitynet] + [controlnet_map[s] for s in controlnet_selection])
+            control_scales = [float(identitynet_strength_ratio)] + [controlnet_scales[s] for s in controlnet_selection]
+            control_images = [face_kps] + [
+                controlnet_map_fn[s](img_controlnet).resize((width, height))
+                for s in controlnet_selection
+            ]
+        else:
+            self.pipe.controlnet = self.controlnet_identitynet
+            control_scales = float(identitynet_strength_ratio)
+            control_images = face_kps
+
+        if seed == 0:
+            seed = random.randint(1, MAX_SEED)
+        generator = torch.Generator(device=device).manual_seed(seed)
+
+        self.pipe.set_ip_adapter_scale(adapter_strength_ratio)
         image = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
             image_embeds=face_emb,
-            image=face_kps,
-            controlnet_conditioning_scale=controlnet_conditioning_scale,
-            num_inference_steps=num_inference_steps,
+            image=control_images,
+            control_mask=None,
+            controlnet_conditioning_scale=control_scales,
+            num_inference_steps=num_steps,
             guidance_scale=guidance_scale,
+            generator=generator,
         ).images[0]
         output_path = "result.jpg"
 
@@ -217,6 +366,6 @@ class Predictor(BasePredictor):
             else:
                 image.save(output_path)
         else:
-            image.save(output_path)       
+            image.save(output_path)
 
         return Path(output_path)
