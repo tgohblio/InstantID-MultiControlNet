@@ -236,10 +236,17 @@ class Predictor(BasePredictor):
             ge=0,
             le=1,
         ),
-        controlnet_selection: str = Input (
-            description="Use pose for skeleton inference, canny for edge detection, and depth for depth map estimation. Or try all three to control the generation process.",
-            default=None,
-            choices=["pose", "canny", "depth"],
+        pose: bool = Input(
+            description="Use pose for skeleton inference",
+            default=False,
+        ),
+        canny: bool = Input(
+            description="Use canny for edge detection",
+            default=False,
+        ),
+        depth_map: bool = Input(
+            description="Use depth for depth map estimation",
+            default=False,
         ),
         pose_strength: float = Input(
             default=0.5,
@@ -334,6 +341,14 @@ class Predictor(BasePredictor):
             "canny": self.get_canny_image,
             "depth": self.get_depth_map,
         }
+
+        controlnet_selection = []
+        if pose:
+            controlnet_selection.append("pose")
+        if canny:
+            controlnet_selection.append("canny")
+        if depth_map:
+            controlnet_selection.append("depth")
 
         if len(controlnet_selection) > 0:
             controlnet_scales = {
