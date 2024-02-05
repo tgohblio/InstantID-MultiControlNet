@@ -16,7 +16,8 @@ build:
 
   # a list of packages in the format <package-name>==<version>
   python_packages:
-    - "torch==2.1.0"
+    - "torch==2.1.2"
+    - "xformers==0.0.23post1"
     - "torchvision"
     - "transformers"
     - "opencv-python==4.9.0.80"
