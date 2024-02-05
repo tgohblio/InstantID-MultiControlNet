@@ -33,6 +33,9 @@ from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
 
 # for ip-adapter, ControlNetModel
 CHECKPOINTS_CACHE = "./checkpoints"
+POSE_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/pose"
+CANNY_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/canny"
+DEPTH_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/depth"
 
 # for SDXL model
 SD_MODEL_CACHE = "./sd_model"
@@ -141,9 +144,29 @@ class Predictor(BasePredictor):
         controlnet_canny_model = "diffusers/controlnet-canny-sdxl-1.0"
         controlnet_depth_model = "diffusers/controlnet-depth-sdxl-1.0-small"
 
-        self.controlnet_pose = ControlNetModel.from_pretrained(controlnet_pose_model, torch_dtype=dtype).to(device)
-        self.controlnet_canny = ControlNetModel.from_pretrained(controlnet_canny_model, torch_dtype=dtype).to(device)
-        self.controlnet_depth = ControlNetModel.from_pretrained(controlnet_depth_model, torch_dtype=dtype).to(device)
+        self.controlnet_pose = ControlNetModel.from_pretrained(
+            controlnet_pose_model,
+            torch_dtype=dtype,
+            use_safetensors=True,
+            cache_dir=POSE_CHKPT_CACHE,
+            local_files_only=True,
+        ).to(device)
+        self.controlnet_canny = ControlNetModel.from_pretrained(
+            controlnet_canny_model,
+            torch_dtype=torch.float16,
+            variant="fp16",
+            use_safetensors=True,
+            cache_dir=CANNY_CHKPT_CACHE,
+            local_files_only=True,
+        ).to("cuda")
+        self.controlnet_depth = ControlNetModel.from_pretrained(
+            controlnet_depth_model,
+            torch_dtype=torch.float16,
+            variant="fp16",
+            use_safetensors=True,
+            cache_dir=DEPTH_CHKPT_CACHE,
+            local_files_only=True,    
+        ).to("cuda")
 
         self.pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
             SD_MODEL_NAME,

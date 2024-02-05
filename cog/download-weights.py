@@ -11,10 +11,15 @@ from diffusers import StableDiffusionXLPipeline
 # append project directory to path so predict.py can be imported
 sys.path.append('.')
 
-from predict import SD_MODEL_NAME, SD_MODEL_CACHE, SAFETY_MODEL_CACHE
-
-# for ip-adapter and ControlNetModel
-CHECKPOINTS_CACHE = "./checkpoints"
+from predict import (
+    SD_MODEL_NAME,
+    SD_MODEL_CACHE,
+    CHECKPOINTS_CACHE,
+    SAFETY_MODEL_CACHE,
+    POSE_CHKPT_CACHE,
+    CANNY_CHKPT_CACHE,
+    DEPTH_CHKPT_CACHE,
+)
 
 # for `models/antelopev2`
 MODELS_CACHE = "./models"
@@ -45,27 +50,74 @@ if not os.path.exists(MODELS_CACHE):
 if not os.path.exists(SAFETY_MODEL_CACHE):
     download_weights(SAFETY_URL, SAFETY_MODEL_CACHE)
 
+model_list = [
+    { 
+        "repo_id": "InstantX/InstantID",
+        "filename": "ip-adapter.bin",
+        "use_symlinks": False,
+        "local_dir": CHECKPOINTS_CACHE,
+    },
+    {
+        "repo_id": "InstantX/InstantID",
+        "filename": "ControlNetModel/config.json",
+        "use_symlinks": False,
+        "local_dir": CHECKPOINTS_CACHE,
+    },
+    {
+        "repo_id": "InstantX/InstantID",
+        "filename": "ControlNetModel/diffusion_pytorch_model.safetensors",
+        "use_symlinks": False,
+        "local_dir": CHECKPOINTS_CACHE,
+    },
+    {
+        "repo_id": "latent-consistency/lcm-lora-sdxl",
+        "filename": "pytorch_lora_weights.safetensors",
+        "use_symlinks": False,
+        "local_dir": CHECKPOINTS_CACHE,
+    },
+    {
+        "repo_id": "thibaud/controlnet-openpose-sdxl-1.0",
+        "filename": "config.json",
+        "use_symlinks": False,
+        "local_dir": POSE_CHKPT_CACHE,
+    },
+    {
+        "repo_id": "thibaud/controlnet-openpose-sdxl-1.0",
+        "filename": "OpenPoseXL2.safetensors",
+        "use_symlinks": False,
+        "local_dir": POSE_CHKPT_CACHE,
+    },
+    {
+        "repo_id": "diffusers/controlnet-canny-sdxl-1.0",
+        "filename": "config.json",
+        "use_symlinks": False,
+        "local_dir": CANNY_CHKPT_CACHE,
+    },
+    {
+        "repo_id": "diffusers/controlnet-canny-sdxl-1.0",
+        "filename": "diffusion_pytorch_model.fp16.safetensors",
+        "use_symlinks": False,
+        "local_dir": CANNY_CHKPT_CACHE,
+    },
+    {
+        "repo_id": "diffusers/controlnet-depth-sdxl-1.0-small",
+        "filename": "config.json",
+        "use_symlinks": False,
+        "local_dir": DEPTH_CHKPT_CACHE,
+    },
+    {
+        "repo_id": "diffusers/controlnet-depth-sdxl-1.0-small",
+        "filename": "diffusion_pytorch_model.fp16.safetensors",
+        "use_symlinks": False,
+        "local_dir": DEPTH_CHKPT_CACHE,
+    },
+]
+
 if not os.path.exists(CHECKPOINTS_CACHE):
-    hf_hub_download(
-        repo_id="InstantX/InstantID",
-        filename="ip-adapter.bin",
-        local_dir_use_symlinks=False,
-        local_dir=CHECKPOINTS_CACHE
-    )
-    hf_hub_download(
-        repo_id="InstantX/InstantID",
-        filename="ControlNetModel/config.json",
-        local_dir=CHECKPOINTS_CACHE
-    )
-    hf_hub_download(
-        repo_id="InstantX/InstantID",
-        filename="ControlNetModel/diffusion_pytorch_model.safetensors",
-        local_dir_use_symlinks=False,
-        local_dir=CHECKPOINTS_CACHE
-    )
-    hf_hub_download(
-        repo_id="latent-consistency/lcm-lora-sdxl",
-        filename="pytorch_lora_weights.safetensors",
-        local_dir_use_symlinks=False,
-        local_dir=CHECKPOINTS_CACHE
-    )
+    for model in model_list:
+        hf_hub_download(
+            repo_id=model["repo_id"],
+            filename=model["filename"],
+            local_dir_use_symlinks=model["use_symlinks"],
+            local_dir=model["local_dir"]
+        )
