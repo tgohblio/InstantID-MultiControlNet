@@ -31,6 +31,7 @@ build:
     - "einops"
     - "omegaconf"
     - "controlnet_aux"
+    - "mediapipe"
 
   # commands run after the environment is setup
   run:
