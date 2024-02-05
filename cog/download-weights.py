@@ -75,42 +75,6 @@ model_list = [
         "use_symlinks": False,
         "local_dir": CHECKPOINTS_CACHE,
     },
-    {
-        "repo_id": "thibaud/controlnet-openpose-sdxl-1.0",
-        "filename": "config.json",
-        "use_symlinks": False,
-        "local_dir": POSE_CHKPT_CACHE,
-    },
-    {
-        "repo_id": "thibaud/controlnet-openpose-sdxl-1.0",
-        "filename": "diffusion_pytorch_model.safetensors",
-        "use_symlinks": False,
-        "local_dir": POSE_CHKPT_CACHE,
-    },
-    {
-        "repo_id": "diffusers/controlnet-canny-sdxl-1.0",
-        "filename": "config.json",
-        "use_symlinks": False,
-        "local_dir": CANNY_CHKPT_CACHE,
-    },
-    {
-        "repo_id": "diffusers/controlnet-canny-sdxl-1.0",
-        "filename": "diffusion_pytorch_model.safetensors",
-        "use_symlinks": False,
-        "local_dir": CANNY_CHKPT_CACHE,
-    },
-    {
-        "repo_id": "diffusers/controlnet-depth-sdxl-1.0-small",
-        "filename": "config.json",
-        "use_symlinks": False,
-        "local_dir": DEPTH_CHKPT_CACHE,
-    },
-    {
-        "repo_id": "diffusers/controlnet-depth-sdxl-1.0-small",
-        "filename": "diffusion_pytorch_model.safetensors",
-        "use_symlinks": False,
-        "local_dir": DEPTH_CHKPT_CACHE,
-    },
 ]
 
 if not os.path.exists(CHECKPOINTS_CACHE):
@@ -121,3 +85,27 @@ if not os.path.exists(CHECKPOINTS_CACHE):
             local_dir_use_symlinks=model["use_symlinks"],
             local_dir=model["local_dir"]
         )
+
+# Download and save the controlnet model weights
+pipe1 = StableDiffusionXLPipeline.from_pretrained(
+    "thibaud/controlnet-openpose-sdxl-1.0",
+    torch_dtype=torch.float16,
+)
+# Save to cache folder. Will be created if doesn't exist.
+pipe1.save_pretrained(POSE_CHKPT_CACHE)
+
+# Download and save the controlnet model weights
+pipe2 = StableDiffusionXLPipeline.from_pretrained(
+    "diffusers/controlnet-canny-sdxl-1.0",
+    torch_dtype=torch.float16,
+)
+# Save to cache folder. Will be created if doesn't exist.
+pipe2.save_pretrained(CANNY_CHKPT_CACHE)
+
+# Download and save the controlnet model weights
+pipe3 = StableDiffusionXLPipeline.from_pretrained(
+    "diffusers/controlnet-depth-sdxl-1.0-small",
+    torch_dtype=torch.float16,
+)
+# Save to cache folder. Will be created if doesn't exist.
+pipe3.save_pretrained(DEPTH_CHKPT_CACHE)
