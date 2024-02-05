@@ -153,20 +153,18 @@ class Predictor(BasePredictor):
         ).to(device)
         self.controlnet_canny = ControlNetModel.from_pretrained(
             controlnet_canny_model,
-            torch_dtype=torch.float16,
-            variant="fp16",
+            torch_dtype=dtype,
             use_safetensors=True,
             cache_dir=CANNY_CHKPT_CACHE,
             local_files_only=True,
-        ).to("cuda")
+        ).to(device)
         self.controlnet_depth = ControlNetModel.from_pretrained(
             controlnet_depth_model,
-            torch_dtype=torch.float16,
-            variant="fp16",
+            torch_dtype=dtype,
             use_safetensors=True,
             cache_dir=DEPTH_CHKPT_CACHE,
             local_files_only=True,    
-        ).to("cuda")
+        ).to(device)
 
         self.pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
             SD_MODEL_NAME,

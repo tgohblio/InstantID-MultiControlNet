@@ -83,7 +83,7 @@ model_list = [
     },
     {
         "repo_id": "thibaud/controlnet-openpose-sdxl-1.0",
-        "filename": "OpenPoseXL2.safetensors",
+        "filename": "diffusion_pytorch_model.safetensors",
         "use_symlinks": False,
         "local_dir": POSE_CHKPT_CACHE,
     },
@@ -95,7 +95,7 @@ model_list = [
     },
     {
         "repo_id": "diffusers/controlnet-canny-sdxl-1.0",
-        "filename": "diffusion_pytorch_model.fp16.safetensors",
+        "filename": "diffusion_pytorch_model.safetensors",
         "use_symlinks": False,
         "local_dir": CANNY_CHKPT_CACHE,
     },
@@ -107,7 +107,7 @@ model_list = [
     },
     {
         "repo_id": "diffusers/controlnet-depth-sdxl-1.0-small",
-        "filename": "diffusion_pytorch_model.fp16.safetensors",
+        "filename": "diffusion_pytorch_model.safetensors",
         "use_symlinks": False,
         "local_dir": DEPTH_CHKPT_CACHE,
     },
