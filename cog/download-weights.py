@@ -6,7 +6,8 @@ import torch
 import time
 import subprocess
 from huggingface_hub import hf_hub_download
-from diffusers import StableDiffusionXLPipeline, ControlNetModel
+from diffusers import StableDiffusionXLPipeline
+from diffusers.model import ControlNetModel
 
 # append project directory to path so predict.py can be imported
 sys.path.append('.')
