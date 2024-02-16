@@ -139,27 +139,23 @@ class Predictor(BasePredictor):
             local_files_only=True,
         )
 
-        # Load controlnet-pose/canny/depth
-        controlnet_pose_model = "thibaud/controlnet-openpose-sdxl-1.0"
-        controlnet_canny_model = "diffusers/controlnet-canny-sdxl-1.0"
-        controlnet_depth_model = "diffusers/controlnet-depth-sdxl-1.0-small"
-
+        # Load controlnet-pose/canny/depth from local cache
         self.controlnet_pose = ControlNetModel.from_pretrained(
-            controlnet_pose_model,
+            POSE_CHKPT_CACHE,
             torch_dtype=dtype,
             use_safetensors=True,
             cache_dir=POSE_CHKPT_CACHE,
             local_files_only=True,
         ).to(device)
         self.controlnet_canny = ControlNetModel.from_pretrained(
-            controlnet_canny_model,
+            CANNY_CHKPT_CACHE,
             torch_dtype=dtype,
             use_safetensors=True,
             cache_dir=CANNY_CHKPT_CACHE,
             local_files_only=True,
         ).to(device)
         self.controlnet_depth = ControlNetModel.from_pretrained(
-            controlnet_depth_model,
+            DEPTH_CHKPT_CACHE,
             torch_dtype=dtype,
             use_safetensors=True,
             cache_dir=DEPTH_CHKPT_CACHE,

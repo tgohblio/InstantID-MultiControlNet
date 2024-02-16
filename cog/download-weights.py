@@ -6,7 +6,7 @@ import torch
 import time
 import subprocess
 from huggingface_hub import hf_hub_download
-from diffusers import StableDiffusionXLPipeline
+from diffusers import StableDiffusionXLPipeline, ControlNetModel
 
 # append project directory to path so predict.py can be imported
 sys.path.append('.')
@@ -87,25 +87,25 @@ if not os.path.exists(CHECKPOINTS_CACHE):
         )
 
 # Download and save the controlnet model weights
-pipe1 = StableDiffusionXLPipeline.from_pretrained(
+pipe = ControlNetModel.from_pretrained(
     "thibaud/controlnet-openpose-sdxl-1.0",
     torch_dtype=torch.float16,
 )
 # Save to cache folder. Will be created if doesn't exist.
-pipe1.save_pretrained(POSE_CHKPT_CACHE)
+pipe.save_pretrained(POSE_CHKPT_CACHE)
 
 # Download and save the controlnet model weights
-pipe2 = StableDiffusionXLPipeline.from_pretrained(
+pipe = ControlNetModel.from_pretrained(
     "diffusers/controlnet-canny-sdxl-1.0",
     torch_dtype=torch.float16,
 )
 # Save to cache folder. Will be created if doesn't exist.
-pipe2.save_pretrained(CANNY_CHKPT_CACHE)
+pipe.save_pretrained(CANNY_CHKPT_CACHE)
 
 # Download and save the controlnet model weights
-pipe3 = StableDiffusionXLPipeline.from_pretrained(
+pipe = ControlNetModel.from_pretrained(
     "diffusers/controlnet-depth-sdxl-1.0-small",
     torch_dtype=torch.float16,
 )
 # Save to cache folder. Will be created if doesn't exist.
-pipe3.save_pretrained(DEPTH_CHKPT_CACHE)
+pipe.save_pretrained(DEPTH_CHKPT_CACHE)
