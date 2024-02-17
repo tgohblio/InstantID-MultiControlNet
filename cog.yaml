@@ -4,7 +4,7 @@
 build:
   # set to true if your model requires a GPU
   gpu: true
-  cuda: "12.1"
+  cuda: "11.8"
 
   # a list of ubuntu apt packages to install
   system_packages:
@@ -18,7 +18,7 @@ build:
   python_packages:
     - "torch==2.1.2"
     - "xformers==0.0.23post1"
-    - "torchvision==0.16.2"
+    - "torchvision"
     - "transformers"
     - "opencv-python==4.9.0.80"
     - "accelerate==0.26.1"
