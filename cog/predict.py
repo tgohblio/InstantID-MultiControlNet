@@ -163,11 +163,12 @@ class Predictor(BasePredictor):
         ).to(device)
 
         self.pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
-            SD_MODEL_NAME,
+            SD_MODEL_CACHE,
             controlnet=[self.controlnet_identitynet],
             torch_dtype=dtype,
             cache_dir=SD_MODEL_CACHE,
             use_safetensors=True,
+            local_files_only=True,
         ).to(device)
 
         # load LCM LoRA
@@ -294,8 +295,8 @@ class Predictor(BasePredictor):
         ),
         seed: int = Input(
             description="Seed number. Set to non-zero to make the image reproducible.",
-            default=None,
-            ge=1,
+            default=0,
+            ge=0,
             le=MAX_SEED,
         ),
         safety_checker: bool = Input(
