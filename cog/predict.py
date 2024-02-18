@@ -3,6 +3,7 @@
 
 import os
 import sys
+import json
 
 from cog import BasePredictor, Input, Path
 
@@ -37,10 +38,6 @@ POSE_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/pose"
 CANNY_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/canny"
 DEPTH_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/depth"
 
-# for SDXL model
-SD_MODEL_CACHE = "./sd_model"
-SD_MODEL_NAME = "GraydientPlatformAPI/albedobase2-xl"
-
 # safety checker model
 SAFETY_MODEL_CACHE = "./safety_cache"
 FEATURE_EXTRACT_CACHE = "feature_extractor"
@@ -49,7 +46,6 @@ FEATURE_EXTRACT_CACHE = "feature_extractor"
 MAX_SEED = np.iinfo(np.int32).max
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = torch.float16 if str(device).__contains__("cuda") else torch.float32
-enable_lcm_arg = False
 
 
 def resize_img(
@@ -127,7 +123,7 @@ class Predictor(BasePredictor):
         ])
 
         # Path to InstantID models
-        face_adapter = f"{CHECKPOINTS_CACHE}/ip-adapter.bin"
+        self.face_adapter = f"{CHECKPOINTS_CACHE}/ip-adapter.bin"
         controlnet_path = f"{CHECKPOINTS_CACHE}/ControlNetModel"
 
         # Load pipeline face ControlNetModel
@@ -162,22 +158,38 @@ class Predictor(BasePredictor):
             local_files_only=True,    
         ).to(device)
 
+        # setup the sdxl base model
+        self.model = "AlbedoBase XL V2"
+        self.load_weights(self.model)
+
+    def load_weights(self, model: str) -> None:
+        """Load sdxl model weights, lora weights, face adapter weights"""
+        with open("img_models.json", "r") as f:
+            data = json.load(f)
+            for modelID in data["model"]:
+                if model == modelID["name"]:
+                    cache_folder = modelID["cacheFolder"]
+                    self.model = model
+                    break
+
         self.pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
-            SD_MODEL_CACHE,
+            cache_folder,
             controlnet=[self.controlnet_identitynet],
             torch_dtype=dtype,
-            cache_dir=SD_MODEL_CACHE,
+            cache_dir=cache_folder,
             use_safetensors=True,
             local_files_only=True,
         )
-
-        # load LCM LoRA
-        self.pipe.load_lora_weights(f"{CHECKPOINTS_CACHE}/pytorch_lora_weights.safetensors")
-        self.pipe.fuse_lora()
-        self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
-
+        # pre-load LCM LoRA, just in case LCM LoRA is selected
+        self.pipe.load_lora_weights(
+            "latent-consistency/lcm-lora-sdxl",
+            cache_dir=CHECKPOINTS_CACHE,
+            local_files_only=True,
+            weight_name="pytorch_lora_weights.safetensors",
+        )
+        self.pipe.disable_lora()
         self.pipe.cuda()
-        self.pipe.load_ip_adapter_instantid(face_adapter)
+        self.pipe.load_ip_adapter_instantid(self.face_adapter)
         self.pipe.image_proj_model.to("cuda")
         self.pipe.unet.to("cuda")
 
@@ -242,6 +254,32 @@ class Predictor(BasePredictor):
             ge=512,
             le=2048,
         ),
+        model: str = Input{
+            description="Select SDXL model",
+            default="AlbedoBase XL V2",
+            choices=[
+                "AlbedoBase XL V2",
+                "Juggernaut XL V8",
+                "Animagine XL V3",
+                "HelloWorld XL 5.0 GPT4V"
+            ]
+        },
+        enable_LCM: bool = Input(
+            description="Use LCM-LoRA for faster inference, with slightly lower quality images as trade-off.",
+            default=False,
+        ),
+        scheduler: str = Input(
+            description="Scheduler",
+            choices=[
+                "DEISMultistepScheduler",
+                "HeunDiscreteScheduler",
+                "EulerDiscreteScheduler",
+                "DPMSolverMultistepScheduler",
+                "DPMSolverMultistepScheduler-Karras",
+                "DPMSolverMultistepScheduler-Karras-SDE",
+            ],
+            default="DPMSolverMultistepScheduler",
+        ),
         adapter_strength_ratio: float = Input(
             description="Image adapter strength (for detail)",
             default=0.8,
@@ -282,14 +320,14 @@ class Predictor(BasePredictor):
             le=1.5,
         ),
         num_steps: int = Input(
-            description="Number of denoising steps. With LCM-LoRA, optimum is 6-8.",
-            default=6,
+            description="Number of denoising steps. If enable LCM-LoRA, optimum is 6-8.",
+            default=25,
             ge=1,
-            le=30,
+            le=50,
         ),
         guidance_scale: float = Input(
-            description="Scale for classifier-free guidance. With LCM-LoRA, optimum is 0-5.",
-            default=0,
+            description="Scale for classifier-free guidance. If enable LCM-LoRA, optimum is 0-5. Otherwise, 7-8.",
+            default=7,
             ge=0,
             le=10,
         ),
@@ -304,7 +342,11 @@ class Predictor(BasePredictor):
             default=True,
         ),
     ) -> Path:
-        """Run a single prediction on the model"""
+        """Run a single prediction on the model"""    
+        # Load the weights if they are different from the base weights
+        if model != self.model:
+            self.load_weights(model)
+
         # Resize the output if the provided dimensions are different from the current ones
         if self.width != width or self.height != height:
             print(f"[!] Resizing output to {width}x{height}")
@@ -384,6 +426,25 @@ class Predictor(BasePredictor):
             self.pipe.controlnet = self.controlnet_identitynet
             control_scales = float(identitynet_strength_ratio)
             control_images = face_kps
+
+        # load LCM LoRA if enabled, else use other schedulers
+        if enable_LCM:
+            self.pipe.enable_lora()
+            self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
+        else:
+            self.pipe.disable_lora()
+            scheduler_class_name = scheduler.split("-")[0]
+
+            add_kwargs = {}
+            if len(scheduler.split("-")) > 1:
+                add_kwargs["use_karras_sigmas"] = True
+            if len(scheduler.split("-")) > 2:
+                add_kwargs["algorithm_type"] = "sde-dpmsolver++"
+            scheduler = getattr(diffusers, scheduler_class_name)
+            self.pipe.scheduler = scheduler.from_config(
+                self.pipe.scheduler.config,
+                **add_kwargs,
+            )
 
         if seed == 0:
             seed = random.randint(1, MAX_SEED)

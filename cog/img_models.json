@@ -1,0 +1,24 @@
+{
+    "model": [
+        {
+            "name": "AlbedoBase XL V2",
+            "url": "https://civitai.com/api/download/models/281176",
+            "cacheFolder": "./checkpoints/albedobase_xl"
+        },
+        {
+            "name": "Juggernaut XL V8",
+            "url": "https://civitai.com/api/download/models/288982",
+            "cacheFolder": "./checkpoints/juggernaut_xl"
+        },
+        {
+            "name": "Animagine XL V3",
+            "url": "https://civitai.com/api/download/models/293564",
+            "cacheFolder": "./checkpoints/animagine_xl"
+        },
+        {
+            "name": "HelloWorld XL 5.0 GPT4V",
+            "url": "https://civitai.com/api/download/models/338512",
+            "cacheFolder": "./checkpoints/helloworld_xl"
+        }
+    ]
+}
