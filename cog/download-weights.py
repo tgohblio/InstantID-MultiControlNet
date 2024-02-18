@@ -103,10 +103,11 @@ pipe = ControlNetModel.from_pretrained(
 pipe.save_pretrained(DEPTH_CHKPT_CACHE)
 
 # Download and save SDXL image models
-with open("img_models.json", "r") as f:
+with open("./cog/img_models.json", "r") as f:
     data = json.load(f)
     for model in data["model"]:
         file_path = os.path.join(model["cacheFolder"], model["filename"])
+        subprocess.check_call(["mkdir", "-p", model["cacheFolder"]], close_fds=False)
         download_weights(model["url"], file_path)
         pipe = StableDiffusionXLPipeline.from_single_file(
             file_path,
