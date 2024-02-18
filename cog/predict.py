@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import random
+import diffusers
 
 from PIL import Image
 from torchvision.transforms import Compose
@@ -164,7 +165,7 @@ class Predictor(BasePredictor):
 
     def load_weights(self, model: str) -> None:
         """Load sdxl model weights, lora weights, face adapter weights"""
-        with open("img_models.json", "r") as f:
+        with open("./cog/img_models.json", "r") as f:
             data = json.load(f)
             for modelID in data["model"]:
                 if model == modelID["name"]:
@@ -181,12 +182,7 @@ class Predictor(BasePredictor):
             local_files_only=True,
         )
         # pre-load LCM LoRA, just in case LCM LoRA is selected
-        self.pipe.load_lora_weights(
-            "latent-consistency/lcm-lora-sdxl",
-            cache_dir=CHECKPOINTS_CACHE,
-            local_files_only=True,
-            weight_name="pytorch_lora_weights.safetensors",
-        )
+        self.pipe.load_lora_weights(f"{CHECKPOINTS_CACHE}/pytorch_lora_weights.safetensors")
         self.pipe.disable_lora()
         self.pipe.cuda()
         self.pipe.load_ip_adapter_instantid(self.face_adapter)
