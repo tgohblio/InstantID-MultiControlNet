@@ -169,7 +169,7 @@ class Predictor(BasePredictor):
             cache_dir=SD_MODEL_CACHE,
             use_safetensors=True,
             local_files_only=True,
-        ).to(device)
+        )
 
         # load LCM LoRA
         self.pipe.load_lora_weights(f"{CHECKPOINTS_CACHE}/pytorch_lora_weights.safetensors")
