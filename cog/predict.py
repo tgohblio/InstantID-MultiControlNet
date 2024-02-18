@@ -254,7 +254,7 @@ class Predictor(BasePredictor):
             ge=512,
             le=2048,
         ),
-        model: str = Input{
+        model: str = Input(
             description="Select SDXL model",
             default="AlbedoBase XL V2",
             choices=[
@@ -263,7 +263,7 @@ class Predictor(BasePredictor):
                 "Animagine XL V3",
                 "HelloWorld XL 5.0 GPT4V"
             ]
-        },
+        ),
         enable_LCM: bool = Input(
             description="Use LCM-LoRA for faster inference, with slightly lower quality images as trade-off.",
             default=False,

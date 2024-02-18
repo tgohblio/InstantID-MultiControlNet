@@ -2,21 +2,25 @@
     "model": [
         {
             "name": "AlbedoBase XL V2",
+            "filename": "albedobase_xl.safetensors",
             "url": "https://civitai.com/api/download/models/281176",
             "cacheFolder": "./checkpoints/albedobase_xl"
         },
         {
             "name": "Juggernaut XL V8",
+            "filename": "juggernaut_xl.safetensors",
             "url": "https://civitai.com/api/download/models/288982",
             "cacheFolder": "./checkpoints/juggernaut_xl"
         },
         {
             "name": "Animagine XL V3",
+            "filename": "animagine_xl.safetensors",
             "url": "https://civitai.com/api/download/models/293564",
             "cacheFolder": "./checkpoints/animagine_xl"
         },
         {
             "name": "HelloWorld XL 5.0 GPT4V",
+            "filename": "helloworld_xl.safetensors",
             "url": "https://civitai.com/api/download/models/338512",
             "cacheFolder": "./checkpoints/helloworld_xl"
         }
