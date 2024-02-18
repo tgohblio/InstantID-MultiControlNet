@@ -1,6 +1,9 @@
 # Configuration for Cog ⚙️
 # Reference: https://github.com/replicate/cog/blob/main/docs/yaml.md
 
+# docker image name
+image: "r8.im/tgohblio/instant-id-multicontrolnet"
+
 build:
   # set to true if your model requires a GPU
   gpu: true
@@ -15,23 +18,7 @@ build:
   python_version: "3.11"
 
   # a list of packages in the format <package-name>==<version>
-  python_packages:
-    - "torch==2.1.2"
-    - "xformers==0.0.23post1"
-    - "torchvision"
-    - "transformers"
-    - "opencv-python==4.9.0.80"
-    - "accelerate==0.26.1"
-    - "insightface==0.7.3"
-    - "diffusers==0.25.1"
-    - "onnxruntime==1.16.3"
-    - "huggingface-hub==0.20.3"
-    - "safetensors==0.4.2"
-    - "peft"
-    - "einops"
-    - "omegaconf"
-    - "controlnet_aux"
-    - "mediapipe"
+  python_requirements:  requirements.txt
 
   # commands run after the environment is setup
   run:
