@@ -40,15 +40,15 @@ cog predict \
 
 ```bash
 cog predict \
--i face_image_path=@examples/sam_resize.png \
--i pose_image_path=@exmaples/pose.png \
+-i face_image_path=@examples/halle-berry.jpeg \
+-i pose_image_path=@examples/poses/ballet-pose.jpg \
 -i prompt="photo of a ballerina on stage" \
 -i width=1024 \
 -i height=1024 \
 -i adapter_strength_ratio=0.8 \
 -i identitynet_strength_ratio=0.8 \
 -i pose=True \
--i pose_strength=0.8 \
+-i pose_strength=1.0 \
 -i num_steps=6 \
 -i guidance_scale=0 \
 -i safety_checker=True
@@ -71,9 +71,9 @@ The following table provides details about each input parameter for the `predict
 | `pose`                          | select ControlNet pose model       | False                                             | Boolean     |
 | `canny`                         | select ControlNet canny edge model | False                                             | Boolean     |
 | `depth_map`                     | select ControlNet depth model      | False                                             | Boolean     |
-| `pose_strength`                 | Scale for pose conditioning        | 0.5                                               | 0.0 - 1.5   |
-| `canny_strength`                | Scale for canny edge conditioning  | 0.5                                               | 0.0 - 1.5   |
-| `depth_strength`                | Scale for depth map conditioning   | 0.5                                               | 0.0 - 1.5   |
+| `pose_strength`                 | Scale for pose conditioning        | 1.0                                               | 0.0 - 1.5   |
+| `canny_strength`                | Scale for canny edge conditioning  | 1.0                                               | 0.0 - 1.5   |
+| `depth_strength`                | Scale for depth map conditioning   | 1.0                                               | 0.0 - 1.5   |
 | `num_steps`                     | Number of denoising steps          | 6                                                 | 1 - 50      |
 | `guidance_scale`                | Scale for classifier-free guidance | 0                                                 | 1 - 10      |
 | `seed`                          | RNG seed number                    | 0 (= random seed)                                 | 0 - int MAX |

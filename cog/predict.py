@@ -267,17 +267,17 @@ class Predictor(BasePredictor):
             default=False,
         ),
         pose_strength: float = Input(
-            default=0.5,
+            default=1.0,
             ge=0,
             le=1.5,
         ),
         canny_strength: float = Input(
-            default=0.5,
+            default=1.0,
             ge=0,
             le=1.5,
         ),
         depth_strength: float = Input(
-            default=0.5,
+            default=1.0,
             ge=0,
             le=1.5,
         ),
