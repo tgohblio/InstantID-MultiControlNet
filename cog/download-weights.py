@@ -2,6 +2,7 @@
 
 import os
 import sys
+import json
 import torch
 import time
 import subprocess
@@ -13,8 +14,6 @@ from diffusers.models import ControlNetModel
 sys.path.append('.')
 
 from predict import (
-    SD_MODEL_NAME,
-    SD_MODEL_CACHE,
     CHECKPOINTS_CACHE,
     SAFETY_MODEL_CACHE,
     POSE_CHKPT_CACHE,
@@ -29,20 +28,12 @@ MODELS_URL = "https://weights.replicate.delivery/default/InstantID/models.tar"
 # for safety checker
 SAFETY_URL = "https://weights.replicate.delivery/default/sdxl/safety-1.0.tar"
 
-# Download and save the SD model weights
-pipe = StableDiffusionXLPipeline.from_pretrained(
-    SD_MODEL_NAME,
-    torch_dtype=torch.float16,
-)
-# Save to cache folder. Will be created if doesn't exist.
-pipe.save_pretrained(SD_MODEL_CACHE)
-
 # Download the ip-adapter and ControlNetModel checkpoints
 def download_weights(url, dest):
     start = time.time()
     print("downloading url: ", url)
     print("downloading to: ", dest)
-    subprocess.check_call(["pget", "-x", url, dest], close_fds=False)
+    subprocess.check_call(["pget", url, dest], close_fds=False)
     print("downloading took: ", time.time() - start)
 
 if not os.path.exists(MODELS_CACHE):
@@ -110,3 +101,16 @@ pipe = ControlNetModel.from_pretrained(
 )
 # Save to cache folder. Will be created if doesn't exist.
 pipe.save_pretrained(DEPTH_CHKPT_CACHE)
+
+# Download and save SDXL image models
+with open("img_models.json", "r") as f:
+    data = json.load(f)
+    for model in data["model"]:
+        file_path = os.path.join(model["cacheFolder"], model["filename"])
+        download_weights(model["url"], file_path)
+        pipe = StableDiffusionXLPipeline.from_single_file(
+            file_path,
+            torch_dtype=torch.float16,
+        )
+        # Save to cache folder. Will be created if doesn't exist.
+        pipe.save_pretrained(model["cacheFolder"])
