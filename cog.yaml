@@ -18,7 +18,7 @@ build:
   python_version: "3.11"
 
   # a list of packages in the format <package-name>==<version>
-  python_requirements:  requirements.txt
+  python_requirements: requirements.txt
 
   # commands run after the environment is setup
   run:
