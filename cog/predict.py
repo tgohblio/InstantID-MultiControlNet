@@ -288,7 +288,7 @@ class Predictor(BasePredictor):
             default=True,
         ),
         lightning_steps: str = Input(
-            description="if lightning LoRA is selected, choose number of inference steps",
+            description="if lightning LoRA is selected, choose number of denoising steps",
             choices=[
                 "2step",
                 "4step",
@@ -348,13 +348,13 @@ class Predictor(BasePredictor):
             le=1.5,
         ),
         num_steps: int = Input(
-            description="Number of denoising steps. If enable LCM-LoRA, optimum is 6-8.",
+            description="Number of denoising steps. If enable fast mode, this is not used.",
             default=25,
             ge=1,
             le=50,
         ),
         guidance_scale: float = Input(
-            description="Scale for classifier-free guidance. If enable LCM-LoRA, optimum is 0-5. Otherwise, 7-8.",
+            description="Scale for classifier-free guidance. Optimum is 4-8. If enable fast mode, this is not used.",
             default=7,
             ge=0,
             le=10,
@@ -476,6 +476,11 @@ class Predictor(BasePredictor):
                 self.pipe.scheduler.config,
                 **add_kwargs,
             )
+
+        # setup parameters if lightning LoRA is selected
+        if enable_fast_mode:
+            guidance_scale = 0
+            num_steps = int(self.lightning_steps.split("_")[-2].strip("step"))
 
         if seed == 0:
             seed = random.randint(1, MAX_SEED)
