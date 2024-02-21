@@ -19,6 +19,7 @@ from predict import (
     POSE_CHKPT_CACHE,
     CANNY_CHKPT_CACHE,
     DEPTH_CHKPT_CACHE,
+    LORA_CHECKPOINTS_CACHE
 )
 
 # for `models/antelopev2`
@@ -65,10 +66,22 @@ model_list = [
         "local_dir": CHECKPOINTS_CACHE,
     },
     {
-        "repo_id": "latent-consistency/lcm-lora-sdxl",
-        "filename": "pytorch_lora_weights.safetensors",
+        "repo_id": "ByteDance/SDXL-Lightning",
+        "filename": "sdxl_lightning_2step_lora.pth",
         "use_symlinks": False,
-        "local_dir": CHECKPOINTS_CACHE,
+        "local_dir": LORA_CHECKPOINTS_CACHE,
+    },
+    {
+        "repo_id": "ByteDance/SDXL-Lightning",
+        "filename": "sdxl_lightning_4step_lora.pth",
+        "use_symlinks": False,
+        "local_dir": LORA_CHECKPOINTS_CACHE,
+    },
+    {
+        "repo_id": "ByteDance/SDXL-Lightning",
+        "filename": "sdxl_lightning_8step_lora.pth",
+        "use_symlinks": False,
+        "local_dir": LORA_CHECKPOINTS_CACHE,
     },
 ]
 

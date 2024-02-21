@@ -16,7 +16,7 @@ import diffusers
 
 from PIL import Image
 from torchvision.transforms import Compose
-from diffusers import LCMScheduler
+from diffusers import EulerDiscreteScheduler
 from diffusers.utils import load_image
 from diffusers.models import ControlNetModel
 from diffusers.pipelines.controlnet.multicontrolnet import MultiControlNetModel
@@ -42,6 +42,9 @@ DEPTH_CHKPT_CACHE = f"{CHECKPOINTS_CACHE}/depth"
 # safety checker model
 SAFETY_MODEL_CACHE = "./safety_cache"
 FEATURE_EXTRACT_CACHE = "feature_extractor"
+
+# for SDXL lightning LoRA
+LORA_CHECKPOINTS_CACHE = f"{CHECKPOINTS_CACHE}/lora"
 
 # global variable
 MAX_SEED = np.iinfo(np.int32).max
@@ -181,13 +184,33 @@ class Predictor(BasePredictor):
             use_safetensors=True,
             local_files_only=True,
         )
-        # pre-load LCM LoRA, just in case LCM LoRA is selected
-        self.pipe.load_lora_weights(f"{CHECKPOINTS_CACHE}/pytorch_lora_weights.safetensors")
+        # pre-load lightning LoRA weights, just in case is selected
+        self.lightning_steps = "4step"
+        self.pipe.load_lora_weights(
+            LORA_CHECKPOINTS_CACHE,
+            cache_dir=LORA_CHECKPOINTS_CACHE,
+            local_files_only=True,
+        )
+        # Ensure sampler uses "trailing" timesteps for lightning LoRA
+        self.pipe.scheduler = EulerDiscreteScheduler.from_config(
+            self.pipe.scheduler.config,
+            timestep_spacing="trailing"
+        )
+
         self.pipe.disable_lora()
         self.pipe.cuda()
         self.pipe.load_ip_adapter_instantid(self.face_adapter)
         self.pipe.image_proj_model.to("cuda")
         self.pipe.unet.to("cuda")
+
+    def load_lightning_lora(self, steps: str):
+        self.pipe.unload_lora_weights()
+        self.pipe.load_lora_weights(
+            LORA_CHECKPOINTS_CACHE,
+            cache_dir=LORA_CHECKPOINTS_CACHE,
+            local_files_only=True,
+        )
+        self.pipe.enable_lora()
 
     def get_depth_map(self, image):
         """Get the depth map from input image"""
@@ -260,9 +283,18 @@ class Predictor(BasePredictor):
                 "HelloWorld XL 5.0 GPT4V"
             ]
         ),
-        enable_LCM: bool = Input(
-            description="Use LCM-LoRA for faster inference, with slightly lower quality images as trade-off.",
-            default=False,
+        enable_fast_mode: bool = Input(
+            description="Enable SDXL-lightning fast inference LoRA",
+            default=True,
+        ),
+        lightning_steps: str = Input(
+            description="if lightning LoRA is selected, choose number of inference steps",
+            choices=[
+                "2step",
+                "4step",
+                "8step",
+            ],
+            default="4step",
         ),
         scheduler: str = Input(
             description="Scheduler",
@@ -424,9 +456,12 @@ class Predictor(BasePredictor):
             control_images = face_kps
 
         # load LCM LoRA if enabled, else use other schedulers
-        if enable_LCM:
-            self.pipe.enable_lora()
-            self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
+        if enable_fast_mode:
+            if self.lightning_steps != lightning_steps:
+                self.load_lightning_lora(lightning_steps)
+                self.lightning_steps = lightning_steps
+            else:
+                self.pipe.enable_lora()
         else:
             self.pipe.disable_lora()
             scheduler_class_name = scheduler.split("-")[0]
