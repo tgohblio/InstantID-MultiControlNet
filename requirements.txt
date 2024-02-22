@@ -12,4 +12,3 @@ peft
 einops
 omegaconf
 controlnet_aux
-mediapipe
