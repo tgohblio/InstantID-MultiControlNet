@@ -286,11 +286,11 @@ class Predictor(BasePredictor):
             ]
         ),
         enable_fast_mode: bool = Input(
-            description="Enable SDXL-lightning fast inference LoRA",
+            description="Enable SDXL-lightning fast inference.",
             default=True,
         ),
         lightning_steps: str = Input(
-            description="if lightning LoRA is selected, choose number of denoising steps",
+            description="if enable fast mode, choose number of denoising steps",
             choices=[
                 "2step",
                 "4step",
@@ -299,7 +299,7 @@ class Predictor(BasePredictor):
             default="4step",
         ),
         scheduler: str = Input(
-            description="Scheduler options. If enable LCM-LoRA, this option is not used.",
+            description="Scheduler options. If enable fast mode, this is not used.",
             choices=[
                 "DEISMultistepScheduler",
                 "HeunDiscreteScheduler",
@@ -464,6 +464,8 @@ class Predictor(BasePredictor):
                 self.lightning_steps = lightning_steps
             else:
                 self.pipe.enable_lora()
+            guidance_scale = 0
+            num_steps = int(self.lightning_steps.split("_")[-2].strip("step"))
         else:
             self.pipe.disable_lora()
             scheduler_class_name = scheduler.split("-")[0]
@@ -478,11 +480,6 @@ class Predictor(BasePredictor):
                 self.pipe.scheduler.config,
                 **add_kwargs,
             )
-
-        # setup parameters if lightning LoRA is selected
-        if enable_fast_mode:
-            guidance_scale = 0
-            num_steps = int(self.lightning_steps.split("_")[-2].strip("step"))
 
         if seed == 0:
             seed = random.randint(1, MAX_SEED)
