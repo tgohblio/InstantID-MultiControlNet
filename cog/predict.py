@@ -265,7 +265,7 @@ class Predictor(BasePredictor):
             default=False,
         ),
         scheduler: str = Input(
-            description="Scheduler",
+            description="Scheduler options. If enable LCM-LoRA, this option is not used.",
             choices=[
                 "DEISMultistepScheduler",
                 "HeunDiscreteScheduler",
@@ -292,23 +292,23 @@ class Predictor(BasePredictor):
             description="Use pose for skeleton inference",
             default=False,
         ),
-        canny: bool = Input(
-            description="Use canny for edge detection",
-            default=False,
-        ),
-        depth_map: bool = Input(
-            description="Use depth for depth map estimation",
-            default=False,
-        ),
         pose_strength: float = Input(
             default=0.5,
             ge=0,
             le=1.5,
         ),
+        canny: bool = Input(
+            description="Use canny for edge detection",
+            default=False,
+        ),
         canny_strength: float = Input(
             default=0.5,
             ge=0,
             le=1.5,
+        ),
+        depth_map: bool = Input(
+            description="Use depth for depth map estimation",
+            default=False,
         ),
         depth_strength: float = Input(
             default=0.5,
