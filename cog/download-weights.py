@@ -67,19 +67,19 @@ model_list = [
     },
     {
         "repo_id": "ByteDance/SDXL-Lightning",
-        "filename": "sdxl_lightning_2step_lora.pth",
+        "filename": "sdxl_lightning_2step_lora.safetensors",
         "use_symlinks": False,
         "local_dir": LORA_CHECKPOINTS_CACHE,
     },
     {
         "repo_id": "ByteDance/SDXL-Lightning",
-        "filename": "sdxl_lightning_4step_lora.pth",
+        "filename": "sdxl_lightning_4step_lora.safetensors",
         "use_symlinks": False,
         "local_dir": LORA_CHECKPOINTS_CACHE,
     },
     {
         "repo_id": "ByteDance/SDXL-Lightning",
-        "filename": "sdxl_lightning_8step_lora.pth",
+        "filename": "sdxl_lightning_8step_lora.safetensors",
         "use_symlinks": False,
         "local_dir": LORA_CHECKPOINTS_CACHE,
     },
