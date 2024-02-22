@@ -465,7 +465,7 @@ class Predictor(BasePredictor):
             else:
                 self.pipe.enable_lora()
             guidance_scale = 0
-            num_steps = int(self.lightning_steps.split("_")[-2].strip("step"))
+            num_steps = int(self.lightning_steps.strip("step"))
         else:
             self.pipe.disable_lora()
             scheduler_class_name = scheduler.split("-")[0]
