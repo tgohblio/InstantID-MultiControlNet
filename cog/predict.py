@@ -189,6 +189,7 @@ class Predictor(BasePredictor):
         self.pipe.load_lora_weights(
             LORA_CHECKPOINTS_CACHE,
             cache_dir=LORA_CHECKPOINTS_CACHE,
+            weight_name=f"sdxl_lightning_{self.lightning_steps}_lora.safetensors",
             local_files_only=True,
         )
         # Ensure sampler uses "trailing" timesteps for lightning LoRA
@@ -208,6 +209,7 @@ class Predictor(BasePredictor):
         self.pipe.load_lora_weights(
             LORA_CHECKPOINTS_CACHE,
             cache_dir=LORA_CHECKPOINTS_CACHE,
+            weight_name=f"sdxl_lightning_{steps}_lora.safetensors",
             local_files_only=True,
         )
         self.pipe.enable_lora()
