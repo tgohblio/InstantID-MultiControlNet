@@ -282,7 +282,8 @@ class Predictor(BasePredictor):
                 "AlbedoBase XL V2",
                 "Juggernaut XL V8",
                 "Animagine XL V3",
-                "HelloWorld XL 5.0 GPT4V"
+                "HelloWorld XL 5.0 GPT4V",
+                "SDXL RongHua V4"
             ]
         ),
         enable_fast_mode: bool = Input(
