@@ -90,6 +90,16 @@ def convert_from_cv2_to_image(img: np.ndarray) -> Image:
 def convert_from_image_to_cv2(img: Image) -> np.ndarray:
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
+def list_models(path:str) -> list:
+    """Return all model names in the json file given by path
+    
+    Arguments:
+        path:str path to json file
+    """
+    with open(path, "r") as f:
+        data = json.load(f)
+        model_list = [model.get("name") for model in data["model"]]
+        return model_list
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -278,13 +288,7 @@ class Predictor(BasePredictor):
         model: str = Input(
             description="Select SDXL model",
             default="AlbedoBase XL V2",
-            choices=[
-                "AlbedoBase XL V2",
-                "Juggernaut XL V8",
-                "Animagine XL V3",
-                "HelloWorld XL 5.0 GPT4V",
-                "SDXL RongHua V4"
-            ]
+            choices=list_models("./img_models.json"),
         ),
         enable_fast_mode: bool = Input(
             description="Enable SDXL-lightning fast inference. If pose, canny or depth map is used, disable it for better quality images.",
