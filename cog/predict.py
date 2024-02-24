@@ -286,7 +286,7 @@ class Predictor(BasePredictor):
             ]
         ),
         enable_fast_mode: bool = Input(
-            description="Enable SDXL-lightning fast inference. If pose, canny or depth map is used, disable it for better quality images.",
+            description="Enable SDXL-lightning fast inference.",
             default=True,
         ),
         lightning_steps: str = Input(
