@@ -367,6 +367,10 @@ class Predictor(BasePredictor):
             ge=0,
             le=MAX_SEED,
         ),
+        enhance_face_region: bool = Input(
+            description="Enhance face region",
+            default=False
+        ),
         safety_checker: bool = Input(
             description="Safety checker is enabled by default. Un-tick to expose unfiltered results.",
             default=True,
@@ -420,6 +424,15 @@ class Predictor(BasePredictor):
             face_info = face_info[-1]
             face_kps = draw_kps(pose_image, face_info["kps"])
             width, height = face_kps.size
+
+        if enhance_face_region:
+            control_mask = np.zeros([height, width, 3])
+            x1, y1, x2, y2 = face_info["bbox"]
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            control_mask[y1:y2, x1:x2] = 255
+            control_mask = Image.fromarray(control_mask.astype(np.uint8))
+        else:
+            control_mask = None
 
         controlnet_map = {
             "pose": self.controlnet_pose,
@@ -491,7 +504,7 @@ class Predictor(BasePredictor):
             negative_prompt=negative_prompt,
             image_embeds=face_emb,
             image=control_images,
-            control_mask=None,
+            control_mask=control_mask,
             controlnet_conditioning_scale=control_scales,
             num_inference_steps=num_steps,
             guidance_scale=guidance_scale,
