@@ -23,6 +23,12 @@
             "filename": "helloworld_xl.safetensors",
             "url": "https://civitai.com/api/download/models/338512",
             "cacheFolder": "./checkpoints/helloworld_xl"
+        },
+        {
+            "name": "SDXL RongHua V4",
+            "filename": "ronghua_xl.safetensors",
+            "url": "https://civitai.com/api/download/models/253479",
+            "cacheFolder": "./checkpoints/ronghua_xl"
         }
     ]
 }
