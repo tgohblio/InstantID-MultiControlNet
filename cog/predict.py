@@ -367,9 +367,9 @@ class Predictor(BasePredictor):
             ge=0,
             le=MAX_SEED,
         ),
-        enhance_face_region: bool = Input(
-            description="Enhance face region",
-            default=False
+        enhance_non_face_region: bool = Input(
+            description="Enhance non-face region",
+            default=True
         ),
         safety_checker: bool = Input(
             description="Safety checker is enabled by default. Un-tick to expose unfiltered results.",
@@ -425,7 +425,7 @@ class Predictor(BasePredictor):
             face_kps = draw_kps(pose_image, face_info["kps"])
             width, height = face_kps.size
 
-        if enhance_face_region:
+        if enhance_non_face_region:
             control_mask = np.zeros([height, width, 3])
             x1, y1, x2, y2 = face_info["bbox"]
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
