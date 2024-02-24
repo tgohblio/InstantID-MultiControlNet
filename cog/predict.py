@@ -261,7 +261,7 @@ class Predictor(BasePredictor):
         ),
         negative_prompt: str = Input(
             description="Input negative prompt",
-            default="ugly, low quality, deformed face",
+            default="(lowres, low quality, worst quality:1.2), (text:1.2), watermark, glitch, deformed, mutated, cross-eyed, ugly, disfigured, blurry, grainy",
         ),
         width: int = Input(
             description="Width of output image",
@@ -327,7 +327,7 @@ class Predictor(BasePredictor):
             default=False,
         ),
         pose_strength: float = Input(
-            default=0.5,
+            default=1.0,
             ge=0,
             le=1.5,
         ),
