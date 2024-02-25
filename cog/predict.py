@@ -4,7 +4,8 @@
 import os
 import sys
 import json
-
+import subprocess
+import time
 from cog import BasePredictor, Input, Path
 
 import cv2
@@ -16,7 +17,7 @@ import diffusers
 
 from PIL import Image
 from torchvision.transforms import Compose
-from diffusers import EulerDiscreteScheduler
+from diffusers import EulerDiscreteScheduler, StableDiffusionXLPipeline
 from diffusers.utils import load_image
 from diffusers.models import ControlNetModel
 from diffusers.pipelines.controlnet.multicontrolnet import MultiControlNetModel
@@ -45,6 +46,9 @@ FEATURE_EXTRACT_CACHE = "feature_extractor"
 
 # for SDXL lightning LoRA
 LORA_CHECKPOINTS_CACHE = f"{CHECKPOINTS_CACHE}/lora"
+
+# default SDXL model
+DEFAULT_SDXL_MODEL = "AlbedoBase XL V2"
 
 # global variable
 MAX_SEED = np.iinfo(np.int32).max
@@ -96,10 +100,44 @@ def list_models(path:str) -> list:
     Arguments:
         path:str path to json file
     """
+    model_list = []
     with open(path, "r") as f:
         data = json.load(f)
         model_list = [model.get("name") for model in data["model"]]
         return model_list
+
+def download_weights(url, dest, extract=True) -> None:
+    """Helper function to download model weights"""
+    start = time.time()
+    print("downloading url: ", url)
+    print("downloading to: ", dest)
+    if extract:
+        subprocess.check_call(["pget", "-x", url, dest], close_fds=False)
+    else:
+        subprocess.check_call(["pget", url, dest], close_fds=False)
+    print("downloading took: ", time.time() - start)
+
+def setup_sdxl_pipeline(model_name: str) -> str:
+    """Helper function to download and load weights into SDXL pipeline"""
+    cache_dir = ""
+    with open("./cog/img_models.json", "r") as f:
+        data = json.load(f)
+        for model in data["model"]:
+            if model["name"] == model_name:
+                cache_dir = model["cacheFolder"]
+                if not os.path.exists(cache_dir):
+                    file_path = os.path.join(cache_dir, model["filename"])
+                    subprocess.check_call(["mkdir", "-p", cache_dir], close_fds=False)
+                    print(f"Downloading new SDXL weights: {file_path}")
+                    download_weights(model["url"], file_path, False)
+                    pipe = StableDiffusionXLPipeline.from_single_file(
+                        file_path,
+                        torch_dtype=torch.float16
+                    )
+                    # Save to cache folder. Will be created if doesn't exist.
+                    pipe.save_pretrained(cache_dir)
+                break
+    return cache_dir
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -172,19 +210,12 @@ class Predictor(BasePredictor):
             local_files_only=True,    
         ).to(device)
 
-        # setup the sdxl base model
-        self.model = "AlbedoBase XL V2"
-        self.load_weights(self.model)
+        # setup the InstantID pipeline
+        self.model = DEFAULT_SDXL_MODEL
+        self.setup_instantID_pipeline(self.model)
 
-    def load_weights(self, model: str) -> None:
-        """Load sdxl model weights, lora weights, face adapter weights"""
-        with open("./cog/img_models.json", "r") as f:
-            data = json.load(f)
-            for modelID in data["model"]:
-                if model == modelID["name"]:
-                    cache_folder = modelID["cacheFolder"]
-                    self.model = model
-                    break
+    def setup_instantID_pipeline(self, model: str) -> None:
+        cache_folder = setup_sdxl_pipeline(model)
 
         self.pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
             cache_folder,
@@ -384,7 +415,8 @@ class Predictor(BasePredictor):
         """Run a single prediction on the model"""    
         # Load the weights if they are different from the base weights
         if model != self.model:
-            self.load_weights(model)
+            self.setup_instantID_pipeline(model)
+            self.model = model
 
         # Resize the output if the provided dimensions are different from the current ones
         if self.width != width or self.height != height:
