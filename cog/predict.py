@@ -319,7 +319,7 @@ class Predictor(BasePredictor):
         model: str = Input(
             description="Select SDXL model",
             default="AlbedoBase XL V2",
-            choices=list_models("./img_models.json"),
+            choices=list_models("./cog/img_models.json"),
         ),
         enable_fast_mode: bool = Input(
             description="Enable SDXL-lightning fast inference. If pose, canny or depth map is used, disable it for better quality images.",
@@ -415,7 +415,7 @@ class Predictor(BasePredictor):
         """Run a single prediction on the model"""    
         # Load the weights if they are different from the base weights
         if model != self.model:
-            self.setup_instantID_pipeline(model)
+            setup_sdxl_pipeline(model)
             self.model = model
 
         # Resize the output if the provided dimensions are different from the current ones
