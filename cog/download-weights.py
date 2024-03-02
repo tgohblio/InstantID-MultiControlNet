@@ -7,11 +7,11 @@ import torch
 from huggingface_hub import hf_hub_download
 from diffusers.models import ControlNetModel
 from controlnet_aux import OpenposeDetector
-from depth_anything.dpt import DepthAnything
 
 # append project directory to path so predict.py can be imported
 sys.path.append('.')
 
+from depth_anything.dpt import DepthAnything
 from predict import (
     download_weights,
     setup_sdxl_pipeline,
