@@ -437,10 +437,11 @@ class Predictor(BasePredictor):
             raise ValueError(
                 "Unable to detect your face in the photo. Please upload a different photo with a clear face."
             )
+        # only use the maximum face
         face_info = sorted(
             face_info,
-            key=lambda x: (x["bbox"][2] - x["bbox"][0]) * x["bbox"][3] - x["bbox"][1],
-        )[-1]  # only use the maximum face
+            key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]),
+        )[-1]
         face_emb = face_info["embedding"]
         face_kps = draw_kps(convert_from_cv2_to_image(face_image_cv2), face_info["kps"])
         img_controlnet = face_image
@@ -458,7 +459,11 @@ class Predictor(BasePredictor):
                 raise ValueError(
                     "Unable to detect a face in the reference image. Please upload another person's image."
                 )
-            face_info = face_info[-1]
+            # only use the maximum face
+            face_info = sorted(
+                face_info,
+                key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]),
+            )[-1]
             face_kps = draw_kps(pose_image, face_info["kps"])
             width, height = face_kps.size
 
