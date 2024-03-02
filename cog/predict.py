@@ -157,8 +157,16 @@ class Predictor(BasePredictor):
         self.app.prepare(ctx_id=0, det_size=(self.width, self.height))
 
         # Load openpose and depth-anything controlnet pipelines
-        self.openpose = OpenposeDetector.from_pretrained("lllyasviel/ControlNet")
-        self.depth_anything = DepthAnything.from_pretrained('LiheYoung/depth_anything_vitl14').to(device).eval()
+        self.openpose = OpenposeDetector.from_pretrained(
+            "lllyasviel/ControlNet",
+            cache_dir=CHECKPOINTS_CACHE,
+            local_files_only=True
+        )
+        self.depth_anything = DepthAnything.from_pretrained(
+            'LiheYoung/depth_anything_vitl14',
+            cache_dir=CHECKPOINTS_CACHE,
+            local_files_only=True
+        ).to(device).eval()
 
         self.transform = Compose([
             Resize(

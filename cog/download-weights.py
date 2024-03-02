@@ -6,6 +6,8 @@ import torch
 
 from huggingface_hub import hf_hub_download
 from diffusers.models import ControlNetModel
+from controlnet_aux import OpenposeDetector
+from depth_anything.dpt import DepthAnything
 
 # append project directory to path so predict.py can be imported
 sys.path.append('.')
@@ -106,6 +108,16 @@ pipe = ControlNetModel.from_pretrained(
 )
 # Save to cache folder. Will be created if doesn't exist.
 pipe.save_pretrained(DEPTH_CHKPT_CACHE)
+
+# Download to cache
+OpenposeDetector.from_pretrained(
+    "lllyasviel/ControlNet",
+    cache_dir=CHECKPOINTS_CACHE
+)
+DepthAnything.from_pretrained(
+    'LiheYoung/depth_anything_vitl14',
+    cache_dir=CHECKPOINTS_CACHE
+)
 
 # Download and save default SDXL model only
 setup_sdxl_pipeline(DEFAULT_SDXL_MODEL)
