@@ -7,7 +7,6 @@ import json
 import subprocess
 import time
 from cog import BasePredictor, Input, Path
-from pathlib import Path
 
 import cv2
 import torch
@@ -127,8 +126,8 @@ def setup_sdxl_pipeline(model_name: str) -> str:
             if model["name"] == model_name:
                 cache_dir = model["cacheFolder"]
                 if not os.path.exists(cache_dir):
-                    Path(cache_dir).mkdir(parents=True)
                     file_path = os.path.join(cache_dir, model["filename"])
+                    subprocess.check_call(["mkdir", "-p", cache_dir], close_fds=False)
                     print(f"Downloading new SDXL weights: {file_path}")
                     download_weights(model["url"], file_path, False)
                     pipe = StableDiffusionXLPipeline.from_single_file(
