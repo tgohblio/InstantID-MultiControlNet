@@ -465,7 +465,6 @@ class Predictor(BasePredictor):
                 key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]),
             )[-1]
             face_kps = draw_kps(pose_image, face_info["kps"])
-            width, height = face_kps.size
 
         if enhance_non_face_region:
             control_mask = np.zeros([height, width, 3])
