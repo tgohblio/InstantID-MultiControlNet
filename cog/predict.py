@@ -159,8 +159,7 @@ class Predictor(BasePredictor):
         # Load openpose and depth-anything controlnet pipelines
         self.openpose = OpenposeDetector.from_pretrained(
             "lllyasviel/ControlNet",
-            cache_dir=CHECKPOINTS_CACHE,
-            local_files_only=True
+            cache_dir=CHECKPOINTS_CACHE
         )
         self.depth_anything = DepthAnything.from_pretrained(
             'LiheYoung/depth_anything_vitl14',
