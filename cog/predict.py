@@ -104,7 +104,7 @@ def list_models(path:str) -> list:
     with open(path, "r") as f:
         data = json.load(f)
         model_list = [model.get("name") for model in data["model"]]
-        return model_list
+    return model_list
 
 def download_weights(url, dest, extract=True) -> None:
     """Helper function to download model weights"""
@@ -557,8 +557,8 @@ class Predictor(BasePredictor):
             num_inference_steps=num_steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            height=height,
-            width=width,
+            height=self.height,
+            width=self.width,
         ).images[0]
         output_path = "result.jpg"
 
