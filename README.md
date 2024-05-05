@@ -19,8 +19,6 @@ cog predict \
 -i face_image_path=@examples/halle-berry.jpeg \
 -i prompt="woman as elven princess, with blue sheen dress" \
 -i negative_prompt="nsfw" \
--i width=1024 \
--i height=1024 \
 -i adapter_strength_ratio=0.8 \
 -i identitynet_strength_ratio=0.8 \
 -i safety_checker=True
@@ -53,8 +51,6 @@ cog predict \
 -i pose_image_path=@examples/poses/ballet-pose.jpg \
 -i prompt="photo of a ballerina on stage" \
 -i model="Juggernaut XL V8" \
--i width=1024 \
--i height=1024 \
 -i adapter_strength_ratio=0.8 \
 -i identitynet_strength_ratio=0.8 \
 -i pose=True \
@@ -80,8 +76,6 @@ The following table provides details about each input parameter for the `predict
 | `enable_fast_mode`           | enable SDXL-Lightning LoRA              | True                                              | Boolean     |
 | `lightning_steps`            | select SDXL-Lightning denoising steps   | "4step"                                           | String      |
 | `scheduler`                  | scheduler algorithm choices             | "DPMSolverMultistepScheduler"                     | String      |
-| `width`                      | Width of output image                   | 640                                               | 512 - 2048  |
-| `height`                     | Height of output image                  | 640                                               | 512 - 2048  |
 | `adapter_strength_ratio`     | Scale for IP adapter                    | 0.8                                               | 0.0 - 1.0   |
 | `identitynet_strength_ratio` | Scale for ControlNet conditioning       | 0.8                                               | 0.0 - 1.0   |
 | `pose`                       | select ControlNet pose model            | False                                             | Boolean     |

@@ -311,18 +311,6 @@ class Predictor(BasePredictor):
             description="Input negative prompt",
             default="(lowres, low quality, worst quality:1.2), (text:1.2), watermark, glitch, deformed, mutated, cross-eyed, ugly, disfigured, blurry, grainy",
         ),
-        width: int = Input(
-            description="Width of output image",
-            default=640,
-            ge=512,
-            le=2048,
-        ),
-        height: int = Input(
-            description="Height of output image",
-            default=640,
-            ge=512,
-            le=2048,
-        ),
         model: str = Input(
             description="Select SDXL model",
             default="AlbedoBase XL V2",
@@ -425,12 +413,10 @@ class Predictor(BasePredictor):
             setup_sdxl_pipeline(model)
             self.model = model
 
-        # Resize the output if the provided dimensions are different from the current ones
-        if self.width != width or self.height != height:
-            print(f"[!] Resizing output to {width}x{height}")
-            self.width = width
-            self.height = height
-            self.app.prepare(ctx_id=0, det_size=(self.width, self.height))
+        if face_image_path is None:
+            raise Exception(
+                f"Unable find any photo. Please upload it."
+            )
 
         # Load and resize the face image
         face_image = load_image(str(face_image_path))
@@ -472,6 +458,7 @@ class Predictor(BasePredictor):
                 key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]),
             )[-1]
             face_kps = draw_kps(pose_image, face_info["kps"])
+            width, height = face_kps.size
 
         if enhance_non_face_region:
             control_mask = np.zeros([height, width, 3])
@@ -547,6 +534,7 @@ class Predictor(BasePredictor):
         generator = torch.Generator(device=device).manual_seed(seed)
 
         self.pipe.set_ip_adapter_scale(adapter_strength_ratio)
+        # Aspect ratio of output image follows face_image_path or pose_image_path (if provided)
         image = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -557,8 +545,8 @@ class Predictor(BasePredictor):
             num_inference_steps=num_steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            height=self.height,
-            width=self.width,
+            height=height,
+            width=width,
         ).images[0]
         output_path = "result.jpg"
 
